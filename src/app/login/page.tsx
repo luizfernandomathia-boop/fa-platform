@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, Eye, EyeOff, Lock, Mail, ArrowRight, CheckCircle, TrendingUp, Shield, AlertCircle } from "lucide-react";
@@ -18,7 +18,7 @@ const STATS = [
   { value: "Grátis",  label: "Para começar" },
 ];
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const next         = searchParams.get("next") ?? "/projetos";
@@ -249,5 +249,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center"><div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>}>
+      <LoginPageInner />
+    </Suspense>
   );
 }
