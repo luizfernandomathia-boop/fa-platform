@@ -34,21 +34,28 @@ export default function CadastroPage() {
     setLoading(true);
 
     const supabase = createSupabaseBrowserClient();
-    const { error: authError } = await supabase.auth.signUp({
+    const { data, error: authError } = await supabase.auth.signUp({
       email:    email.trim(),
       password,
       options: {
-        data: { full_name: fullName.trim() },
+        data:            { full_name: fullName.trim() },
+        emailRedirectTo: `${window.location.origin}/login`,
       },
     });
 
     if (authError) {
-      setError(authError.message);
+      setError(
+        authError.message === "User already registered"
+          ? "Este e-mail já está cadastrado. Tente entrar na sua conta."
+          : authError.message
+      );
       setLoading(false);
+    } else if (data.session) {
+      // Confirmação de e-mail desabilitada — já está logado
+      router.push("/projetos");
     } else {
+      // Confirmação de e-mail habilitada — precisa verificar o e-mail
       setSuccess(true);
-      // If email confirmation is disabled in Supabase, redirect directly
-      setTimeout(() => router.push("/historico"), 2500);
     }
   };
 
@@ -59,10 +66,19 @@ export default function CadastroPage() {
           <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-5">
             <CheckCircle className="w-7 h-7 text-emerald-600" />
           </div>
-          <h2 className="text-[20px] font-bold text-slate-900 mb-2">Conta criada!</h2>
-          <p className="text-[13px] text-slate-600 leading-relaxed">
-            Bem-vindo à FA Solutions. Redirecionando para o painel…
+          <h2 className="text-[20px] font-bold text-slate-900 mb-2">Confirme seu e-mail</h2>
+          <p className="text-[13px] text-slate-600 leading-relaxed mb-4">
+            Enviamos um link de confirmação para <span className="font-semibold text-slate-800">{email}</span>.
           </p>
+          <p className="text-[13px] text-slate-500 leading-relaxed">
+            Abra seu e-mail, clique no link de confirmação e depois volte aqui para entrar.
+          </p>
+          <Link
+            href="/login"
+            className="mt-6 inline-block text-[13px] text-blue-600 hover:text-blue-700 font-semibold"
+          >
+            Já confirmei → Entrar
+          </Link>
         </div>
       </div>
     );

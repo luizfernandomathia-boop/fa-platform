@@ -40,10 +40,13 @@ function LoginPageInner() {
     });
 
     if (authError) {
+      const msg = authError.message;
       setError(
-        authError.message === "Invalid login credentials"
+        msg === "Invalid login credentials"
           ? "E-mail ou senha incorretos. Verifique e tente novamente."
-          : authError.message
+          : msg.toLowerCase().includes("email not confirmed")
+          ? "Você precisa confirmar seu e-mail antes de entrar. Verifique sua caixa de entrada (e o spam)."
+          : msg
       );
       setLoading(false);
     } else {
