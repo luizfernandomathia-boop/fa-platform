@@ -17,6 +17,8 @@ import {
   Clock,
   ChevronRight,
   AlertCircle,
+  Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Project, ProjectColor } from "@/types/project";
@@ -72,58 +74,159 @@ function SkeletonCard() {
   );
 }
 
-// ─── Project card ─────────────────────────────────────────────────────────────
+// ─── Confirm delete modal ─────────────────────────────────────────────────────
 
-function ProjectCard({ project }: { project: Project }) {
-  const color = COLOR_CLASSES[project.color as ProjectColor] ?? COLOR_CLASSES.blue;
-
+function ConfirmDeleteModal({
+  project,
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  project: Project;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
   return (
-    <Link
-      href={`/projetos/${project.id}`}
-      className="group bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden"
-    >
-      {/* Colored accent bar */}
-      <div className={`h-1 w-full ${color.accent}`} />
-
-      <div className="p-5 flex flex-col flex-1">
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
-          <div className={`w-10 h-10 rounded-xl ${color.bg} flex items-center justify-center shrink-0`}>
-            <ProjectIcon name={project.icon} className={`w-5 h-5 ${color.text}`} />
-          </div>
-          <div className="flex-1 min-w-0 pt-0.5">
-            <h3 className="text-[14px] font-bold text-slate-900 leading-tight truncate group-hover:text-blue-700 transition-colors">
-              {project.name}
-            </h3>
-            <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${color.bg} ${color.text}`}>
-              {PROJECT_TYPE_LABELS[project.type]}
-            </span>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm p-6">
+        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+          <Trash2 className="w-5 h-5 text-red-600" />
         </div>
-
-        {/* Description */}
-        {project.description && (
-          <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2 mb-3">
-            {project.description}
-          </p>
-        )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-3">
-          <div className="flex items-center gap-1 text-[11px] text-slate-400">
-            <FileText className="w-3.5 h-3.5" />
-            <span>{project.analysis_count} análise{project.analysis_count !== 1 ? "s" : ""}</span>
-            <span className="mx-1.5">·</span>
-            <Clock className="w-3.5 h-3.5" />
-            <span>{relativeTime(project.updated_at)}</span>
-          </div>
-          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+        <h3 className="text-[16px] font-bold text-slate-900 text-center mb-2">
+          Excluir projeto?
+        </h3>
+        <p className="text-[13px] text-slate-500 text-center leading-relaxed mb-6">
+          O projeto <span className="font-semibold text-slate-700">"{project.name}"</span> e todas as suas análises serão excluídos permanentemente.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-xl text-[13px] font-semibold text-white transition-colors flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <><Trash2 className="w-3.5 h-3.5" /> Excluir</>
+            )}
+          </button>
         </div>
       </div>
-    </Link>
+    </div>
+  );
+}
+
+// ─── Project card ─────────────────────────────────────────────────────────────
+
+function ProjectCard({
+  project,
+  onDeleted,
+}: {
+  project: Project;
+  onDeleted: (id: string) => void;
+}) {
+  const color = COLOR_CLASSES[project.color as ProjectColor] ?? COLOR_CLASSES.blue;
+  const [menuOpen,   setMenuOpen]   = useState(false);
+  const [showModal,  setShowModal]  = useState(false);
+  const [deleting,   setDeleting]   = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+    if (res.ok) {
+      onDeleted(project.id);
+    }
+    setDeleting(false);
+    setShowModal(false);
+  };
+
+  return (
+    <>
+      {showModal && (
+        <ConfirmDeleteModal
+          project={project}
+          onConfirm={handleDelete}
+          onCancel={() => setShowModal(false)}
+          loading={deleting}
+        />
+      )}
+
+      <div className="group relative bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden">
+        {/* Colored accent bar */}
+        <div className={`h-1 w-full ${color.accent}`} />
+
+        {/* 3-dot menu button */}
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v); }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-all"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-8 z-20 bg-white border border-slate-200 rounded-xl shadow-lg py-1 w-40">
+                <button
+                  onClick={(e) => { e.preventDefault(); setMenuOpen(false); setShowModal(true); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Excluir projeto
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <Link href={`/projetos/${project.id}`} className="p-5 flex flex-col flex-1">
+          {/* Header */}
+          <div className="flex items-start gap-3 mb-3">
+            <div className={`w-10 h-10 rounded-xl ${color.bg} flex items-center justify-center shrink-0`}>
+              <ProjectIcon name={project.icon} className={`w-5 h-5 ${color.text}`} />
+            </div>
+            <div className="flex-1 min-w-0 pt-0.5 pr-6">
+              <h3 className="text-[14px] font-bold text-slate-900 leading-tight truncate group-hover:text-blue-700 transition-colors">
+                {project.name}
+              </h3>
+              <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${color.bg} ${color.text}`}>
+                {PROJECT_TYPE_LABELS[project.type]}
+              </span>
+            </div>
+          </div>
+
+          {/* Description */}
+          {project.description && (
+            <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2 mb-3">
+              {project.description}
+            </p>
+          )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-3">
+            <div className="flex items-center gap-1 text-[11px] text-slate-400">
+              <FileText className="w-3.5 h-3.5" />
+              <span>{project.analysis_count} análise{project.analysis_count !== 1 ? "s" : ""}</span>
+              <span className="mx-1.5">·</span>
+              <Clock className="w-3.5 h-3.5" />
+              <span>{relativeTime(project.updated_at)}</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+          </div>
+        </Link>
+      </div>
+    </>
   );
 }
 
@@ -274,7 +377,11 @@ export default function ProjetosPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {projects.map((p) => (
-                <ProjectCard key={p.id} project={p} />
+                <ProjectCard
+                  key={p.id}
+                  project={p}
+                  onDeleted={(id) => setProjects((prev) => prev.filter((x) => x.id !== id))}
+                />
               ))}
 
               {/* "New project" card */}

@@ -8,8 +8,9 @@ import {
   Users, BookOpen, FolderOpen, Briefcase, PiggyBank,
   AlertCircle, CheckCircle, ChevronRight, Plus, Upload,
   AlertTriangle, TrendingUp, TrendingDown, Minus,
-  LayoutDashboard, X,
+  LayoutDashboard, X, Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { Project } from "@/types/project";
 import type { FileAnalysis, DocumentInsight } from "@/types/analysis";
 import { PROJECT_TYPE_LABELS, COLOR_CLASSES } from "@/types/project";
@@ -539,14 +540,29 @@ function IndividualAnalysis({ analysis, onBack }: { analysis: FileAnalysis; onBa
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ProjectDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id }   = useParams<{ id: string }>();
+  const router   = useRouter();
 
-  const [project,  setProject]  = useState<Project | null>(null);
-  const [analyses, setAnalyses] = useState<FileAnalysis[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
+  const [project,       setProject]       = useState<Project | null>(null);
+  const [analyses,      setAnalyses]      = useState<FileAnalysis[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState<string | null>(null);
+  const [showDelModal,  setShowDelModal]  = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
   // null = show project dashboard; FileAnalysis = show individual
   const [selected, setSelected] = useState<FileAnalysis | null>(null);
+
+  const handleDeleteProject = async () => {
+    if (!project) return;
+    setDeleting(true);
+    const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/projetos");
+    } else {
+      setDeleting(false);
+      setShowDelModal(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -628,7 +644,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Upload button */}
-        <div className="p-3 border-b border-slate-100 shrink-0">
+        <div className="p-3 border-b border-slate-100 shrink-0 space-y-2">
           <Link
             href={`/upload?project=${id}`}
             className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-bold rounded-xl transition-colors shadow-sm shadow-blue-200"
@@ -636,7 +652,48 @@ export default function ProjectDetailPage() {
             <Plus className="w-4 h-4" />
             Upload novo arquivo
           </Link>
+          <button
+            onClick={() => setShowDelModal(true)}
+            className="flex items-center justify-center gap-2 w-full py-2 border border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 text-[12px] font-semibold rounded-xl transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Excluir projeto
+          </button>
         </div>
+
+        {/* Delete confirmation modal */}
+        {showDelModal && project && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDelModal(false)} />
+            <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm p-6">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-[16px] font-bold text-slate-900 text-center mb-2">Excluir projeto?</h3>
+              <p className="text-[13px] text-slate-500 text-center leading-relaxed mb-6">
+                O projeto <span className="font-semibold text-slate-700">"{project.name}"</span> e todas as suas análises serão excluídos permanentemente.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDelModal(false)}
+                  className="flex-1 py-2.5 border border-slate-200 rounded-xl text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteProject}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 rounded-xl text-[13px] font-semibold text-white transition-colors flex items-center justify-center gap-2"
+                >
+                  {deleting
+                    ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <><Trash2 className="w-3.5 h-3.5" /> Excluir</>
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Navigation: Dashboard geral + files */}
         <div className="flex-1 overflow-y-auto">
