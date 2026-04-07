@@ -167,7 +167,7 @@ function ProjectCard({
         <div className="absolute top-3 right-3 z-10">
           <button
             onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v); }}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover:opacity-100 transition-all"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
